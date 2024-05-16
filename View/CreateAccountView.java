@@ -20,7 +20,6 @@ import org.json.JSONObject;
  */
 public class CreateAccountView extends javax.swing.JFrame {
     DataOutputStream output;
-    DataInputStream input;
     Socket socket;
     
     private JSONObject createAccountJSON() {
@@ -38,7 +37,13 @@ public class CreateAccountView extends javax.swing.JFrame {
      */
     public CreateAccountView(Socket socket) {
         initComponents();
+        setLocationRelativeTo(null);
         this.socket = socket;
+        try {
+            output = new DataOutputStream(socket.getOutputStream());
+        } catch (IOException ex) {
+            Logger.getLogger(CreateAccountView.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     /**
@@ -186,7 +191,6 @@ public class CreateAccountView extends javax.swing.JFrame {
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         try {
             JSONObject json = createAccountJSON();
-            output = new DataOutputStream(socket.getOutputStream());
             output.writeUTF(json.toString());
             output.flush();
         } catch (IOException ex) {
@@ -196,7 +200,7 @@ public class CreateAccountView extends javax.swing.JFrame {
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
         dispose();
-        LogInView inView = new LogInView(socket);
+        LogInView inView = new LogInView();
         inView.setVisible(true);
     }//GEN-LAST:event_jButton2ActionPerformed
 
@@ -246,8 +250,8 @@ public class CreateAccountView extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JSeparator jSeparator1;
-    private javax.swing.JTextField jTFEmailUser;
-    private javax.swing.JTextField jTFNameUser;
-    private javax.swing.JTextField jTFPasswordUser;
+    public static javax.swing.JTextField jTFEmailUser;
+    public static javax.swing.JTextField jTFNameUser;
+    public static javax.swing.JTextField jTFPasswordUser;
     // End of variables declaration//GEN-END:variables
 }

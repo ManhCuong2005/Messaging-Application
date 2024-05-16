@@ -1,4 +1,4 @@
-package Server.app;
+package Server;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -22,7 +22,7 @@ public class Server extends javax.swing.JFrame{
     static Socket socket;
     static DataOutputStream output;
     static DataInputStream input;
-    public static String roomID ;
+//    public static String roomID ;
     private static DefaultListModel model;
 //    private List<String> roomIds;
 //    private List<Socket> clientSockets;
@@ -197,8 +197,8 @@ public class Server extends javax.swing.JFrame{
                 
                 input = new DataInputStream(socket.getInputStream());
                 output = new DataOutputStream(socket.getOutputStream());
-                roomID = input.readUTF();
-                ClientHandler.getMessagesByRoomID(roomID, output);
+//                roomID = input.readUTF();
+//                ClientHandler.getMessagesByRoomID(roomID, output);
                 
                 Thread t = new Thread(new ClientHandler(socket));
                 t.start();

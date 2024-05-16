@@ -8,26 +8,39 @@ import java.io.DataOutputStream;
 import javax.swing.JOptionPane;
 import org.json.JSONObject;
 import Client.Client;
+import Client.Client;
+import static Client.Client.jtfRoomId;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.DefaultListModel;
+import javax.swing.JList;
 /**
  *
  * @author ACER
  */
-public class LogInView extends javax.swing.JFrame {
-    DataOutputStream output;
-    DataInputStream input;
-    Socket socket;
+public class LogInView extends javax.swing.JFrame implements Runnable{
+    public static DataOutputStream output;
+    public static DataInputStream input;
+    public static Socket socket;
+    public static final String serverIP = "192.168.1.57"; //jtfPort.getText()
+    DefaultListModel model;
+    private DefaultListModel<String> messageListModel;
+    private JList<String> messageList;
+    static String name;
     /**
      * Creates new form LogInView
      */
-    public LogInView(Socket socket) {
+    public LogInView() {
         initComponents();
-        this.socket = socket;
+        setLocationRelativeTo(null);
+        model = new DefaultListModel();
+        messageListModel = new DefaultListModel<>();
+        messageList = new JList<>(messageListModel);
     }
+
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -39,10 +52,11 @@ public class LogInView extends javax.swing.JFrame {
     private void initComponents() {
 
         jLabel1 = new javax.swing.JLabel();
-        jTextFieldMail = new javax.swing.JTextField();
         jLabel2 = new javax.swing.JLabel();
-        jTextFieldPassword = new javax.swing.JTextField();
         jButton1 = new javax.swing.JButton();
+        jTextFieldMail = new javax.swing.JTextField();
+        jTextFieldPassword = new javax.swing.JTextField();
+        jButton4 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -57,39 +71,57 @@ public class LogInView extends javax.swing.JFrame {
             }
         });
 
+        jTextFieldPassword.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextFieldPasswordActionPerformed(evt);
+            }
+        });
+
+        jButton4.setText("Tạo tài khoản");
+        jButton4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton4ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(101, 101, 101)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGap(61, 61, 61)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
-                        .addComponent(jTextFieldMail, javax.swing.GroupLayout.PREFERRED_SIZE, 297, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(jTextFieldMail))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jTextFieldPassword, javax.swing.GroupLayout.PREFERRED_SIZE, 297, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 121, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addContainerGap(201, Short.MAX_VALUE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 121, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 119, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jTextFieldPassword, javax.swing.GroupLayout.PREFERRED_SIZE, 297, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addContainerGap(89, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(91, 91, 91)
+                .addGap(85, 85, 85)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jTextFieldMail, javax.swing.GroupLayout.DEFAULT_SIZE, 32, Short.MAX_VALUE)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jTextFieldPassword)
-                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jTextFieldMail, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jTextFieldPassword, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
-                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(295, Short.MAX_VALUE))
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(117, Short.MAX_VALUE))
         );
 
         pack();
@@ -97,43 +129,34 @@ public class LogInView extends javax.swing.JFrame {
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         try {
-            JSONObject json = logIn();
+            JSONObject json = new JSONObject();
+            json.put("type", "login");
+            json.put("email", jTextFieldMail.getText());
+            json.put("password", jTextFieldPassword.getText());
             
-            output = new DataOutputStream(socket.getOutputStream());
             System.out.println(json.toString());
             output.writeUTF(json.toString());
             output.flush();
-            
-//            input = new DataInputStream(socket.getInputStream());
-//            String response = input.readUTF();
-//            JSONObject jsonResponse = new JSONObject(response);
-//            String notice = jsonResponse.getString("type");
-//            System.out.println("Thông điệp từ server" + notice);
-//            if (notice.equals("log_in")) {
-////                dispose();
-////                Client c = new Client();
-////                c.setVisible(true);
-//                JOptionPane.showMessageDialog(null, "Login success");
-//            } else {
-//                JOptionPane.showMessageDialog(null, "Login Failed");
-//            }
         } catch (IOException ex) {
             Logger.getLogger(LogInView.class.getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_jButton1ActionPerformed
 
-    private JSONObject logIn() {
-        JSONObject json = new JSONObject();
-        
-        if(!jTextFieldMail.getText().isEmpty() && !jTextFieldPassword.getText().isEmpty()) {
-            json.put("type", "login");
-            json.put("email", jTextFieldMail.getText());
-            json.put("password", jTextFieldPassword.getText());
-        }else {
-            JOptionPane.showMessageDialog(null, "Vui lòng nhập đầy đủ thông tin!");
-        }
-        return json;
-    }
+    private void jTextFieldPasswordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextFieldPasswordActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jTextFieldPasswordActionPerformed
+
+    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
+        // TODO add your handling code here:
+        dispose();
+        CreateAccountView accountView = new CreateAccountView(socket);
+        accountView.setVisible(true);
+    }//GEN-LAST:event_jButton4ActionPerformed
+
+//    private JSONObject logIn() {
+//        
+//        return json;
+//    }
     
     /**
      * @param args the command line arguments
@@ -165,16 +188,86 @@ public class LogInView extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-//                new LogInView().setVisible(true);
+                new LogInView().setVisible(true);
+                try {
+                    socket = new Socket(serverIP, 8888);
+                    input = new DataInputStream(socket.getInputStream());
+                    output = new DataOutputStream(socket.getOutputStream());
+                    
+                    LogInView inView = new LogInView();
+                    Thread t = new Thread(inView);
+                    t.start();
+                } catch (IOException ex) {
+                    Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         });
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
+    private javax.swing.JButton jButton4;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JTextField jTextFieldMail;
     private javax.swing.JTextField jTextFieldPassword;
     // End of variables declaration//GEN-END:variables
+
+    private void closeLogin() {
+        dispose();
+        Client c = new Client(socket);
+        c.setVisible(true);
+        Client.jLabelName.setText(name);
+    }
+    
+    @Override
+    public void run() {
+        try {
+            while (true) {
+                String response = input.readUTF();
+                JSONObject jsonResponse = new JSONObject(response);
+                String type = jsonResponse.getString("type");
+                System.out.println("Thông điệp từ server: " + type);
+                if (type.equals("login")) {
+                    if (jsonResponse.getString("status").equals("success")) {
+                        JOptionPane.showMessageDialog(null, "Đăng nhập thành công");
+                        name = jsonResponse.getString("name");
+                        System.out.println("Tên ở client hiện là: " + name);
+                        closeLogin();
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Sai tài khoản hoặc mật khẩu");
+                    }
+                } else if (type.equals("history_message")){
+                    String message = jsonResponse.getString("message");
+                    model.addElement(message);
+                    Client.jList1.setModel(model);
+    //                Cuộn xuống cuối danh sách tin nhắn
+                    Client.jList1.ensureIndexIsVisible(model.getSize() - 1);
+                } else if (type.equals("send_message")) {
+                    String message = jsonResponse.getString("message");
+                    model.addElement(message);
+                    Client.jList1.setModel(model);
+                    Client.jList1.ensureIndexIsVisible(model.getSize() - 1);
+                } else if (type.equals("create_room")) {
+                    if (jsonResponse.getString("status").equals("success")) {
+                        JOptionPane.showMessageDialog(null, "Đã tạo phòng thành công!");
+                    } else if (jsonResponse.getString("status").equals("failed")) {
+                        JOptionPane.showMessageDialog(null, "ID phòng đã tồn tại!");
+                    }
+                } else if (type.equals("create_account")) {
+                    if(jsonResponse.getString("status").equals("success")) {
+                        JOptionPane.showMessageDialog(null, "Account created successfully!");
+                        CreateAccountView.jTFEmailUser.setText("");
+                        CreateAccountView.jTFNameUser.setText("");
+                        CreateAccountView.jTFPasswordUser.setText("");
+                    } else  if (jsonResponse.getString("status").equals("failed")){
+                        JOptionPane.showMessageDialog(null, "Account exited!");
+                    }
+                    
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

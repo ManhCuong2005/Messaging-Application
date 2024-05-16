@@ -28,6 +28,7 @@ public class CreateRoomView extends javax.swing.JFrame{
      */
     public CreateRoomView(Socket socket) {
         initComponents();
+        setLocationRelativeTo(null);
         this.socket = socket;
     }
 
@@ -46,7 +47,6 @@ public class CreateRoomView extends javax.swing.JFrame{
         jTFPassWordRoom = new javax.swing.JTextField();
         jButtonCreate = new javax.swing.JButton();
         jButtonCreate1 = new javax.swing.JButton();
-        jButton1 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -65,17 +65,10 @@ public class CreateRoomView extends javax.swing.JFrame{
         });
 
         jButtonCreate1.setFont(new java.awt.Font("Times New Roman", 1, 18)); // NOI18N
-        jButtonCreate1.setText("<<Back");
+        jButtonCreate1.setText("Back<<");
         jButtonCreate1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButtonCreate1ActionPerformed(evt);
-            }
-        });
-
-        jButton1.setText("jButton1");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
             }
         });
 
@@ -84,13 +77,9 @@ public class CreateRoomView extends javax.swing.JFrame{
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(42, 42, 42)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jButtonCreate1)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addGap(60, 60, 60)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                                 .addComponent(jButtonCreate, javax.swing.GroupLayout.PREFERRED_SIZE, 114, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -103,13 +92,16 @@ public class CreateRoomView extends javax.swing.JFrame{
                                 .addGroup(layout.createSequentialGroup()
                                     .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                    .addComponent(jTFPassWordRoom, javax.swing.GroupLayout.PREFERRED_SIZE, 330, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                        .addGap(76, 76, 76)))
-                .addGap(19, 19, 19))
+                                    .addComponent(jTFPassWordRoom, javax.swing.GroupLayout.PREFERRED_SIZE, 330, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jButtonCreate1)))
+                .addContainerGap(77, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
             .addGroup(layout.createSequentialGroup()
+                .addGap(138, 138, 138)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jTFRoomID)
                     .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -117,16 +109,11 @@ public class CreateRoomView extends javax.swing.JFrame{
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jTFPassWordRoom)
                     .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(18, 18, 18)
-                        .addComponent(jButtonCreate, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 309, Short.MAX_VALUE)
-                        .addComponent(jButtonCreate1))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(10, 10, 10))))
+                .addGap(18, 18, 18)
+                .addComponent(jButtonCreate, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 168, Short.MAX_VALUE)
+                .addComponent(jButtonCreate1)
+                .addContainerGap())
         );
 
         pack();
@@ -134,8 +121,8 @@ public class CreateRoomView extends javax.swing.JFrame{
 
     private void jButtonCreate1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonCreate1ActionPerformed
         dispose();
-        CreateAccountView accountView = new CreateAccountView(socket);
-        accountView.setVisible(true);
+        Client client = new Client(socket);
+        client.setVisible(true);
     }//GEN-LAST:event_jButtonCreate1ActionPerformed
 
     private void jButtonCreateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonCreateActionPerformed
@@ -150,29 +137,12 @@ public class CreateRoomView extends javax.swing.JFrame{
             output.writeUTF(json.toString());
             output.flush();
 
-//            Client.socket.setSoTimeout(5000);
-            input = new DataInputStream(socket.getInputStream());
-            String notice = input.readUTF();
-            if (notice.equals("success")) {
-                JOptionPane.showMessageDialog(null, "Success");
-            }else {
-                // Xử lý thông báo khi không thành công (ví dụ: thông báo lỗi)
-                JOptionPane.showMessageDialog(null, "Error: Failed to create room");
-            }
-            
             jTFRoomID.setText("");
             jTFPassWordRoom.setText("");
         } catch (IOException ex) {
             Logger.getLogger(CreateRoomView.class.getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_jButtonCreateActionPerformed
-
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-        dispose();
-        CreateAccountView accountView = new CreateAccountView(socket);
-        accountView.setVisible(true);
-    }//GEN-LAST:event_jButton1ActionPerformed
     
     private JSONObject createRoomIdJSON() {
         JSONObject json = new JSONObject();
@@ -219,13 +189,12 @@ public class CreateRoomView extends javax.swing.JFrame{
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
     private javax.swing.JButton jButtonCreate;
     private javax.swing.JButton jButtonCreate1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
-    private javax.swing.JTextField jTFPassWordRoom;
-    private javax.swing.JTextField jTFRoomID;
+    public static javax.swing.JTextField jTFPassWordRoom;
+    public static javax.swing.JTextField jTFRoomID;
     // End of variables declaration//GEN-END:variables
 
 }

@@ -115,6 +115,9 @@
           </Properties>
         </Component>
         <Component class="javax.swing.JTextField" name="jTFNameUser">
+          <AuxValues>
+            <AuxValue name="JavaCodeGenerator_VariableModifier" type="java.lang.Integer" value="9"/>
+          </AuxValues>
         </Component>
         <Component class="javax.swing.JLabel" name="jLabel3">
           <Properties>
@@ -125,6 +128,9 @@
           </Properties>
         </Component>
         <Component class="javax.swing.JTextField" name="jTFEmailUser">
+          <AuxValues>
+            <AuxValue name="JavaCodeGenerator_VariableModifier" type="java.lang.Integer" value="9"/>
+          </AuxValues>
         </Component>
         <Component class="javax.swing.JLabel" name="jLabel4">
           <Properties>
@@ -135,6 +141,9 @@
           </Properties>
         </Component>
         <Component class="javax.swing.JTextField" name="jTFPasswordUser">
+          <AuxValues>
+            <AuxValue name="JavaCodeGenerator_VariableModifier" type="java.lang.Integer" value="9"/>
+          </AuxValues>
         </Component>
         <Component class="javax.swing.JButton" name="jButton1">
           <Properties>
