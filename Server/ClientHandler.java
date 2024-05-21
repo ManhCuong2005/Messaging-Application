@@ -30,6 +30,7 @@ public class ClientHandler implements Runnable{
     DataOutputStream output;
     public static ArrayList<Socket> clients = new ArrayList<>();
     public static Map<String, List<ClientHandler>> rooms = new HashMap<>();
+    private static Map<ClientHandler, List<String>> clientRooms = new HashMap<>();
 //    static DataOutputStream output;
 
     public ClientHandler(Socket socket) {
@@ -74,16 +75,63 @@ public class ClientHandler implements Runnable{
                 } else if (type.equals("history_message")) {
                     roomId = receivedJson.getString("roomid");
                     getMessagesByRoomID(roomId, output, this);
+                    removeAllRoomsForClient(this);
                     addClientToRoom(roomId, this);
-                } 
+                } else if (type.equals("ConfirmPasswordRoom")) {
+                    confirmPasswordRoom(receivedJson);
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            removeClientFromRoom(roomId, this); 
+            removeClientFromRoom(roomId, this);
         }
     }
     
+    public void confirmPasswordRoom(JSONObject json) {
+        boolean isAuthenticated = false;
+        try (Connection connection = JDBCUtil.getConnection()) {
+            // Chuẩn bị câu lệnh SQL để kiểm tra mật khẩu và roomID
+            String sql = "SELECT 1 FROM roomId WHERE roomId = ? AND password = ?";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                // Thiết lập giá trị cho các tham số từ JSON
+                preparedStatement.setString(1, json.getString("roomId"));
+                preparedStatement.setString(2, json.getString("password"));
+
+                try (ResultSet rs = preparedStatement.executeQuery()) {
+                    // Kiểm tra nếu có bản ghi nào được trả về
+                    isAuthenticated = rs.next();
+                    JSONObject jsonResponse = new JSONObject();
+                    jsonResponse.put("type", "confirmPassword");
+
+                    if (isAuthenticated) {
+                        jsonResponse.put("status", "success");
+                        output.writeUTF(jsonResponse.toString());
+                        output.flush();
+                        System.out.println("Password is correct.");
+                    } else {
+                        jsonResponse.put("status", "failed");
+                        output.writeUTF(jsonResponse.toString());
+                        output.flush();
+                        System.out.println("Invalid password.");
+                    }
+                }
+            }
+        } catch (SQLException | IOException e) {
+            e.printStackTrace();
+            try {
+                JSONObject jsonResponse = new JSONObject();
+                jsonResponse.put("type", "confirmPassword");
+                jsonResponse.put("status", "error");
+                output.writeUTF(jsonResponse.toString());
+                output.flush();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+
     public static synchronized void removeClientFromRoom(String roomId, ClientHandler clientHandler) {
         List<ClientHandler> clientsInRoom = rooms.get(roomId);
         if (clientsInRoom != null) {
@@ -95,7 +143,54 @@ public class ClientHandler implements Runnable{
             System.out.println("null");
         }
     }
+    
+    public static synchronized void removeAllRoomsForClient(ClientHandler clientHandler) {
+        List<String> roomsForClient = clientRooms.get(clientHandler);
+        if (roomsForClient != null) {
+            for (String roomId : roomsForClient) {
+                removeClientFromRoom(roomId, clientHandler);
+            }
+            clientRooms.remove(clientHandler);
+        }
+    }
 
+    public static synchronized void addClientToRoom(String roomId, ClientHandler clientHandler) {
+        List<ClientHandler> clientsInRoom = rooms.get(roomId);
+        if (clientsInRoom == null) {
+            clientsInRoom = new ArrayList<>();
+            rooms.put(roomId, clientsInRoom);
+        }
+
+        // Kiểm tra xem phòng đã có client handler nào chưa
+        if (!clientsInRoom.contains(clientHandler)) {
+            clientsInRoom.add(clientHandler);
+
+            // Cập nhật clientRooms
+            List<String> roomsForClient = clientRooms.get(clientHandler);
+            if (roomsForClient == null) {
+                roomsForClient = new ArrayList<>();
+                clientRooms.put(clientHandler, roomsForClient);
+            }
+            if (!roomsForClient.contains(roomId)) {
+                roomsForClient.add(roomId);
+            }
+        }
+    }
+    
+    // Trong phương thức addClientToRoom
+//    public static synchronized void addClientToRoom(String roomId, ClientHandler clientHandler) {
+//        List<ClientHandler> clientsInRoom = rooms.get(roomId);
+//        if (clientsInRoom == null) {
+//            clientsInRoom = new ArrayList<>();
+//            rooms.put(roomId, clientsInRoom);
+//        }
+//
+//        // Kiểm tra xem phòng đã có client handler nào chưa
+//        if (!clientsInRoom.contains(clientHandler)) {
+//            clientsInRoom.add(clientHandler);
+//        }
+//    }
+    
     public static synchronized void sendMessageToRoom(String roomId, JSONObject message) {
         List<ClientHandler> clientsInRoom = rooms.get(roomId);
         if (clientsInRoom != null) {
@@ -110,28 +205,6 @@ public class ClientHandler implements Runnable{
                     e.printStackTrace();
                 }
             }
-        }
-    }
-    
-//    public static synchronized void addClientToRoom(String roomId, ClientHandler clientHandler) {
-//        List<ClientHandler> clientsInRoom = rooms.get(roomId);
-//        if (clientsInRoom == null) {
-//            clientsInRoom = new ArrayList<>();
-//            rooms.put(roomId, clientsInRoom);
-//        }
-//        clientsInRoom.add(clientHandler);
-//    }
-    // Trong phương thức addClientToRoom
-    public static synchronized void addClientToRoom(String roomId, ClientHandler clientHandler) {
-        List<ClientHandler> clientsInRoom = rooms.get(roomId);
-        if (clientsInRoom == null) {
-            clientsInRoom = new ArrayList<>();
-            rooms.put(roomId, clientsInRoom);
-        }
-
-        // Kiểm tra xem phòng đã có client handler nào chưa
-        if (!clientsInRoom.contains(clientHandler)) {
-            clientsInRoom.add(clientHandler);
         }
     }
     
@@ -310,38 +383,6 @@ public class ClientHandler implements Runnable{
     private void removeClient(Socket socket) {
         clients.remove(socket);
     }
-    
-    
-    // Phương thức để lấy tin nhắn từ cơ sở dữ liệu cho một phòng cụ thể
-//    public static void getMessagesByRoomID(String roomID, DataOutputStream output) {
-////        String connectionURL = "jdbc:sqlserver://localhost:1433;databaseName=Chat_Application;user=sa;password=cuong22052005;encrypt=true;trustServerCertificate=true;";
-////        ArrayList<String> messages = new ArrayList<>();
-//        try (Connection connection = JDBCUtil.getConnection()) {
-//            String sql = "SELECT message FROM Message WHERE roomID = ?";
-//            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-//                preparedStatement.setString(1, roomID);
-//                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-//                    while (resultSet.next()) {
-////                        messages.add(resultSet.getString("Message"));
-//                        // Gửi dữ liệu về client
-//                        JSONObject json = new JSONObject();
-//                        json.put("type", "message_history");
-//                        json.put("message", resultSet.getString("message"));
-//                        try {
-//                            System.out.println("Tin nhắn lịch sử phía server: " + resultSet.getString("message"));
-//                            output.writeUTF(json.toString());
-//                            output.flush();
-//                        } catch (IOException e) {
-//                            e.printStackTrace();
-//                        }
-//                    }
-//                    System.out.println("Tất cả tin nhắn đã đực gởi");
-//                }
-//            }
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//        }
-//    }
     
     // Trong phương thức getMessagesByRoomID
     public static void getMessagesByRoomID(String roomID, DataOutputStream output, ClientHandler clientHandler) {

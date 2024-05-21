@@ -5,10 +5,13 @@
 package View;
 
 import Client.Client;
+import Controller.MD5;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
@@ -25,10 +28,19 @@ public class CreateAccountView extends javax.swing.JFrame {
     private JSONObject createAccountJSON() {
         JSONObject json = new JSONObject();
         if (jTFEmailUser.getText() != null) {
-            json.put("type", "create_account");
-            json.put("name", jTFNameUser.getText());
-            json.put("email", jTFEmailUser.getText());
-            json.put("password", jTFPasswordUser.getText());
+            
+            String password;
+            try {
+                json.put("type", "create_account");
+                json.put("name", jTFNameUser.getText());
+                json.put("email", jTFEmailUser.getText());
+                password = MD5.encrypt(jTFPasswordUser.getText());
+                json.put("password", password);
+            } catch (UnsupportedEncodingException ex) {
+                Logger.getLogger(CreateAccountView.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (NoSuchAlgorithmException ex) {
+                Logger.getLogger(CreateAccountView.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         return json;
     }
