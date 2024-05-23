@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
+import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
@@ -28,10 +29,9 @@ public class LogInView extends javax.swing.JFrame implements Runnable{
     public static DataOutputStream output;
     public static DataInputStream input;
     public static Socket socket;
-    public static final String serverIP = "192.168.1.6"; //jtfPort.getText()
+    public static final String serverIP = "192.168.1.3"; //jtfPort.getText()
     public static DefaultListModel model;
-    private DefaultListModel<String> messageListModel;
-    private JList<String> messageList;
+    public static DefaultListModel<String> messageListModel;
     static String name;
     /**
      * Creates new form LogInView
@@ -41,7 +41,6 @@ public class LogInView extends javax.swing.JFrame implements Runnable{
         setLocationRelativeTo(null);
         model = new DefaultListModel();
         messageListModel = new DefaultListModel<>();
-        messageList = new JList<>(messageListModel);
     }
 
     /**
@@ -175,9 +174,7 @@ public class LogInView extends javax.swing.JFrame implements Runnable{
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         try {
             JSONObject json = new JSONObject();
-            // Lấy dữ liệu từ JPasswordField
             char[] passWord = jPasswordField1.getPassword();
-            // Chuyển đổi mảng ký tự thành chuỗi để hiển thị (chỉ để demo, không an toàn trong thực tế)
             String passwordString = new String(passWord);
             String password;
             try {
@@ -277,10 +274,7 @@ public class LogInView extends javax.swing.JFrame implements Runnable{
     // End of variables declaration//GEN-END:variables
 
     private void closeLogin() {
-        dispose();
-        Client c = new Client(socket);
-        c.setVisible(true);
-        Client.jLabelName.setText(name);
+        
     }
     
     @Override
@@ -296,21 +290,28 @@ public class LogInView extends javax.swing.JFrame implements Runnable{
                         JOptionPane.showMessageDialog(null, "Đăng nhập thành công");
                         name = jsonResponse.getString("name");
                         System.out.println("Tên ở client hiện là: " + name);
-                        closeLogin();
+                        
+                        Client c = new Client(socket);
+                        c.setVisible(true);
+                        Client.jLabelName.setText(name);
+                        Client.jLabelEmail.setText(jsonResponse.getString("email"));
+                        Client.email = jsonResponse.getString("email");
                     } else {
                         JOptionPane.showMessageDialog(null, "Sai tài khoản hoặc mật khẩu");
                     }
                 } else if (type.equals("history_message")){
                     String message = jsonResponse.getString("message");
                     model.addElement(message);
-                    Client.jList1.setModel(model);
+                    Client.jListMessage.setModel(model);
     //                Cuộn xuống cuối danh sách tin nhắn
-                    Client.jList1.ensureIndexIsVisible(model.getSize() - 1);
+                    Client.jListMessage.ensureIndexIsVisible(model.getSize() - 1);
+                    
+                    
                 } else if (type.equals("send_message")) {
                     String message = jsonResponse.getString("message");
                     model.addElement(message);
-                    Client.jList1.setModel(model);
-                    Client.jList1.ensureIndexIsVisible(model.getSize() - 1);
+                    Client.jListMessage.setModel(model);
+                    Client.jListMessage.ensureIndexIsVisible(model.getSize() - 1);
                 } else if (type.equals("create_room")) {
                     if (jsonResponse.getString("status").equals("success")) {
                         JOptionPane.showMessageDialog(null, "Đã tạo phòng thành công!");
@@ -331,12 +332,47 @@ public class LogInView extends javax.swing.JFrame implements Runnable{
                     if (jsonResponse.getString("status").equals("success")) {
                         JSONObject jsonRoomID = new JSONObject();
                         jsonRoomID.put("type", "history_message");
-                        jsonRoomID.put("roomid", Client.roomId);
+                        jsonRoomID.put("roomId", Client.roomId);
+                        jsonRoomID.put("email", Client.email);
                         output.writeUTF(jsonRoomID.toString());
                         output.flush();
+                        
+                        boolean isDuplicate = true;
+                        String roomId = Client.jtfRoomId.getText();
+
+                        // Kiểm tra trùng lặp
+                        Enumeration<String> elements = messageListModel.elements();
+                        while (elements.hasMoreElements()) {
+                            if (roomId.equals(elements.nextElement())) {
+                                isDuplicate = false;
+                                break;
+                            }
+                        }
+
+                        if (isDuplicate) {
+                            messageListModel.addElement(roomId);
+                            Client.jList.setModel(messageListModel);
+                        }
                     } else {
                         JOptionPane.showMessageDialog(null, "Mật khẩu sai!");
                     }
+                } else if (type.equals("message_list")) { 
+//                    boolean isDuplicate = true;
+                    String room = jsonResponse.getString("roomId");
+                    
+                    // Kiểm tra trùng lặp
+//                    Enumeration<String> elements = messageListModel.elements();
+//                    while (elements.hasMoreElements()) {
+//                        if (room.equals(elements.nextElement())) {
+//                            isDuplicate = false;
+//                            break;
+//                        }
+//                    }
+                    
+//                    if (isDuplicate) {
+                        messageListModel.addElement(room);
+                        Client.jList.setModel(messageListModel);
+//                    }
                 }
             }
         } catch (IOException e) {

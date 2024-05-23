@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JOptionPane;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -73,7 +74,7 @@ public class ClientHandler implements Runnable{
                 } else if (type.equals("login")) {
                     checkAccount(receivedJson);
                 } else if (type.equals("history_message")) {
-                    roomId = receivedJson.getString("roomid");
+                    roomId = receivedJson.getString("roomId");
                     getMessagesByRoomID(roomId, output, this);
                     removeAllRoomsForClient(this);
                     addClientToRoom(roomId, this);
@@ -109,6 +110,21 @@ public class ClientHandler implements Runnable{
                         output.writeUTF(jsonResponse.toString());
                         output.flush();
                         System.out.println("Password is correct.");
+                        
+                        String sql2 = "INSERT INTO user_groups (email, roomId) VALUES (?, ?)";
+                        try (PreparedStatement pt = connection.prepareStatement(sql2)) {
+                            pt.setString(1, json.getString("email"));
+                            pt.setString(2, json.getString("roomId"));
+
+                            int rowsAffected = pt.executeUpdate();
+                            if (rowsAffected > 0) {
+                                System.out.println("Insert successful: " + rowsAffected);
+                            } else {
+                                System.out.println("No user found with the provided email.");
+                            }
+                        } catch (SQLException e) {
+                            e.printStackTrace(); 
+                        }
                     } else {
                         jsonResponse.put("status", "failed");
                         output.writeUTF(jsonResponse.toString());
@@ -131,7 +147,54 @@ public class ClientHandler implements Runnable{
         }
     }
 
+    public void getMessageList (JSONObject json) {
+        String roomid;
+        JSONObject jSONList = new JSONObject();
+        try (Connection con = JDBCUtil.getConnection()) {
+            String sql = "SELECT roomid FROM user_groups WHERE email = ?";
+            try (PreparedStatement st = con.prepareStatement(sql)) {
+                st.setString(1, json.getString("email"));
+                
+                try (ResultSet rs = st.executeQuery()) {
+                    while (rs.next()) {
+                        roomid = rs.getString("roomId");
+                        jSONList.put("type", "message_list");
+                        jSONList.put("roomId", roomid);
+                        
+                        try {
+                            output.writeUTF(jSONList.toString());
+                            output.flush();
+                        } catch (Exception e) {
+                        }
+                    }
+                }
+            } catch (Exception e) {
+            }
+        } catch (Exception e) {
+        }
+    }
 
+    private String getName (String email) {
+        String name = null;
+        try (Connection connection = JDBCUtil.getConnection()) {
+            String sql = "SELECT name FROM users WHERE email=?";
+            try (PreparedStatement st = connection.prepareStatement(sql)) {
+                st.setString(1, email);
+                
+                try (ResultSet rs = st.executeQuery()) {
+                    if (rs.next()) {
+                        name = rs.getString("name");
+                        System.out.println("Tên: " + name);
+                    }
+                } catch (Exception e) {
+                }
+            } catch (Exception e) {
+            }
+        } catch (Exception e) {
+        }
+        return name;
+    }
+    
     public static synchronized void removeClientFromRoom(String roomId, ClientHandler clientHandler) {
         List<ClientHandler> clientsInRoom = rooms.get(roomId);
         if (clientsInRoom != null) {
@@ -332,9 +395,11 @@ public class ClientHandler implements Runnable{
                             jsonAccounnt.put("type", "login");
                             jsonAccounnt.put("status", "success");
                             jsonAccounnt.put("name", name);
+                            jsonAccounnt.put("email", json.getString("email"));
                             output.writeUTF(jsonAccounnt.toString());
                             output.flush();
                             System.out.println("Đã gởi log_in");
+                            getMessageList(json);
                         } catch (IOException ex) {
                             Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
                         }
@@ -356,27 +421,6 @@ public class ClientHandler implements Runnable{
             e.printStackTrace();
         }
 //        return isAuthenticated;
-    }
-    
-    private String getName (String email) {
-        String name = null;
-        try (Connection connection = JDBCUtil.getConnection()) {
-            String sql = "SELECT name FROM users WHERE email=?";
-            try (PreparedStatement st = connection.prepareStatement(sql)) {
-                st.setString(1, email);
-                
-                try (ResultSet rs = st.executeQuery()) {
-                    if (rs.next()) {
-                        name = rs.getString("name");
-                        System.out.println("Tên: " + name);
-                    }
-                } catch (Exception e) {
-                }
-            } catch (Exception e) {
-            }
-        } catch (Exception e) {
-        }
-        return name;
     }
     
     // Phương thức để loại bỏ client khỏi danh sách clients

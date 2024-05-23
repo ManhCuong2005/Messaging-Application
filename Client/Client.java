@@ -1,6 +1,7 @@
 package Client;
 
 import Controller.MD5;
+import Server.app.JDBC.JDBCUtil;
 import View.CreateAccountView;
 import View.LogInView;
 import java.awt.BorderLayout;
@@ -17,10 +18,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import java.sql.PreparedStatement;
+import java.util.Enumeration;
 import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import org.json.JSONObject;
 //import org.json.JSONObject;
 
@@ -29,17 +33,14 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
     public static DataOutputStream output;
     public static DataInputStream input;
     DefaultListModel model;
-    private DefaultListModel<String> messageListModel;
-    private JList<String> messageList;
     String name;
     public static String roomId;
+    public static String email;
 
     public Client(Socket socket) {
         initComponents();
         setLocationRelativeTo(null);
         model = LogInView.model;
-        messageListModel = new DefaultListModel<>();
-        messageList = new JList<>(messageListModel);
         this.socket = socket;
         try {
             output = new DataOutputStream(socket.getOutputStream());
@@ -47,6 +48,66 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
         } catch (IOException ex) {
             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
         }
+        
+        jListMessage.setModel(model);
+        
+        jList.setModel(model);
+        
+//        jList.addListSelectionListener(new ListSelectionListener() {
+//            public void valueChanged(ListSelectionEvent e) {
+//                if (!e.getValueIsAdjusting()) {
+//                    
+//                    try {
+//                        // Lấy phần tử đã chọn
+//                        String selectedValue = jList.getSelectedValue();
+//                        System.out.println("Selected: " + selectedValue);
+//
+//                        model.clear();
+//                        jListMessage.setModel(model);
+//
+//                        JSONObject jsonConfirmPasswordRoom = new JSONObject();
+//                        jsonConfirmPasswordRoom.put("type", "history_message");
+//                        jsonConfirmPasswordRoom.put("roomId", selectedValue);
+//                        jsonConfirmPasswordRoom.put("email", email);
+//                        output.writeUTF(jsonConfirmPasswordRoom.toString());
+//                        output.flush();
+//                    } catch (IOException ex) {
+//                        Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//                    }
+//                }
+//            }
+//        });
+
+        jList.addListSelectionListener(new ListSelectionListener() {
+            public void valueChanged(ListSelectionEvent e) {
+                if (!e.getValueIsAdjusting()) {
+                    try {
+                        String selectedValue = jList.getSelectedValue();
+
+                        if (selectedValue != null) {
+                            System.out.println("Selected: " + selectedValue);
+
+                            model.clear();
+                            jListMessage.setModel(model);
+
+                            JSONObject jsonConfirmPasswordRoom = new JSONObject();
+                            jsonConfirmPasswordRoom.put("type", "history_message");
+                            jsonConfirmPasswordRoom.put("roomId", selectedValue);
+                            jsonConfirmPasswordRoom.put("email", email);
+                            output.writeUTF(jsonConfirmPasswordRoom.toString());
+                            output.flush();
+                            
+                            jtfRoomId.setText(selectedValue);
+                        } else {
+                            System.out.println("Selected value is null");
+                        }
+                    } catch (IOException ex) {
+                        Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            }
+        });
+
     }
 
     private JSONObject createMessageJSON() {
@@ -58,6 +119,7 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
         }
         return json;
     }
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -66,17 +128,23 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
         jLabel4 = new javax.swing.JLabel();
         jtfRoomId = new javax.swing.JTextField();
         jButtonJoin = new javax.swing.JButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jList1 = new javax.swing.JList<>();
         jScrollPane2 = new javax.swing.JScrollPane();
         jtareaMess = new javax.swing.JTextArea();
         jButtonSend = new javax.swing.JButton();
-        jLabel3 = new javax.swing.JLabel();
         jLabelName = new javax.swing.JLabel();
         jButton3 = new javax.swing.JButton();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        jListMessage = new javax.swing.JList<>();
+        jLabelEmail = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
+        jSeparator1 = new javax.swing.JSeparator();
         jPanel2 = new javax.swing.JPanel();
         jSeparator2 = new javax.swing.JSeparator();
         jLabel1 = new javax.swing.JLabel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jList = new javax.swing.JList<>();
+        jSeparator3 = new javax.swing.JSeparator();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -99,10 +167,6 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
             }
         });
 
-        jList1.setFont(new java.awt.Font("Times New Roman", 0, 18)); // NOI18N
-        jList1.setAutoscrolls(false);
-        jScrollPane1.setViewportView(jList1);
-
         jtareaMess.setColumns(20);
         jtareaMess.setFont(new java.awt.Font("Times New Roman", 0, 20)); // NOI18N
         jtareaMess.setRows(3);
@@ -116,11 +180,8 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
             }
         });
 
-        jLabel3.setFont(new java.awt.Font("Times New Roman", 1, 20)); // NOI18N
-        jLabel3.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-        jLabel3.setText("NAME:");
-
         jLabelName.setFont(new java.awt.Font("Times New Roman", 1, 20)); // NOI18N
+        jLabelName.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.LOWERED));
 
         jButton3.setFont(new java.awt.Font("Times New Roman", 1, 20)); // NOI18N
         jButton3.setText("Tạo Phòng");
@@ -130,6 +191,18 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
             }
         });
 
+        jListMessage.setFont(new java.awt.Font("Times New Roman", 0, 20)); // NOI18N
+        jScrollPane3.setViewportView(jListMessage);
+
+        jLabelEmail.setFont(new java.awt.Font("Times New Roman", 1, 20)); // NOI18N
+        jLabelEmail.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.LOWERED));
+
+        jLabel2.setFont(new java.awt.Font("Times New Roman", 1, 20)); // NOI18N
+        jLabel2.setText("Tên:");
+
+        jLabel3.setFont(new java.awt.Font("Times New Roman", 1, 20)); // NOI18N
+        jLabel3.setText("Email:");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -137,21 +210,26 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jSeparator1)
+                    .addComponent(jScrollPane3)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                         .addComponent(jScrollPane2)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jButtonSend, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jLabelName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                             .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, 116, Short.MAX_VALUE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jtfRoomId, javax.swing.GroupLayout.PREFERRED_SIZE, 504, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addComponent(jtfRoomId, javax.swing.GroupLayout.PREFERRED_SIZE, 504, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel3)
+                                    .addComponent(jLabel2))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(jLabelName, javax.swing.GroupLayout.DEFAULT_SIZE, 562, Short.MAX_VALUE)
+                                    .addComponent(jLabelEmail, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jButtonJoin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -163,20 +241,28 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jLabelName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jButton3))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jtfRoomId)
-                    .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButtonJoin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabelName, javax.swing.GroupLayout.DEFAULT_SIZE, 31, Short.MAX_VALUE)
+                            .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabelEmail, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addComponent(jButton3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(3, 3, 3)
+                .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 4, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 496, Short.MAX_VALUE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jButtonJoin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jtfRoomId)
+                    .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 454, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
-                    .addComponent(jButtonSend, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jButtonSend, javax.swing.GroupLayout.PREFERRED_SIZE, 45, Short.MAX_VALUE))
                 .addContainerGap())
         );
 
@@ -187,12 +273,23 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
         jLabel1.setText("MESSAGE LIST");
         jLabel1.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
 
+        jList.setFont(new java.awt.Font("Times New Roman", 1, 20)); // NOI18N
+        jScrollPane1.setViewportView(jList);
+
+        jSeparator3.setOrientation(javax.swing.SwingConstants.VERTICAL);
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 173, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 173, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jSeparator3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
@@ -202,7 +299,11 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
             .addComponent(jSeparator2)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 591, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane1)
+                    .addComponent(jSeparator3))
+                .addContainerGap())
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -212,8 +313,7 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, 175, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -225,23 +325,63 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonJoinActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonJoinActionPerformed
-        model.clear();
-        jList1.setModel(model);
         roomId = jtfRoomId.getText();
+        boolean isDuplicate = false;
+        
         try {
-            String passWord = JOptionPane.showInputDialog(null, "confirm");
-            
-            if (passWord != null) {
-                String password = MD5.encrypt(passWord);
-                JSONObject jsonConfirmPasswordRoom = new JSONObject();
-                jsonConfirmPasswordRoom.put("type", "ConfirmPasswordRoom");
-                jsonConfirmPasswordRoom.put("roomId", roomId);
-                jsonConfirmPasswordRoom.put("password", password);
-                output.writeUTF(jsonConfirmPasswordRoom.toString());
-                output.flush();
+            // Kiểm tra trùng lặp
+            Enumeration<String> elements = LogInView.messageListModel.elements();
+            while (elements.hasMoreElements()) {
+                if (roomId.equals(elements.nextElement())) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+
+            if (isDuplicate) {
+                JOptionPane.showMessageDialog(null, "Bạn đã tham gia phòng này rồi!");
+            } else {
+                model.clear();
+                jListMessage.setModel(model);
+                String passWord = JOptionPane.showInputDialog(null, "confirm");
+
+                if (passWord != null) {
+                    String password = MD5.encrypt(passWord);
+                    JSONObject jsonConfirmPasswordRoom = new JSONObject();
+                    jsonConfirmPasswordRoom.put("type", "ConfirmPasswordRoom");
+                    jsonConfirmPasswordRoom.put("roomId", roomId);
+                    jsonConfirmPasswordRoom.put("password", password);
+                    jsonConfirmPasswordRoom.put("email", email);
+                    output.writeUTF(jsonConfirmPasswordRoom.toString());
+                    output.flush();
+                }
             }
         } catch (Exception e) {
         }
+
+//        try (Connection connection = JDBCUtil.getConnection()) {
+//            roomId = jtfRoomId.getText();
+//            if (roomId.equals("")) {
+//                JOptionPane.showMessageDialog(this, "Vui lòng nhập Room ID");
+//            } else {
+//                String sql = "SELECT * FROM User_Groups WHERE roomID = ? and email = ?";
+//                PreparedStatement pst = connection.prepareStatement(sql);
+//                pst.setString(1, roomId);
+//                pst.setString(2, email);
+//                ResultSet rs = pst.executeQuery();
+//                if (rs.next()) {
+//                    JOptionPane.showMessageDialog(this, "Bạn đã ở trong phòng này");
+//                } else {
+//                    String query = "INSERT INTO User_Groups(roomID, email) VALUES (?, ?)";
+//                    PreparedStatement statement = connection.prepareStatement(query);
+//                    statement.setString(1, roomId);
+//                    statement.setString(2, email);
+//                    statement.executeUpdate();
+//                }
+//            }
+//        } catch (SQLException ex) {
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//        }
     }//GEN-LAST:event_jButtonJoinActionPerformed
 
     private void jButtonSendActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSendActionPerformed
@@ -329,14 +469,14 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
 ////                    JSONObject receivedJson = new JSONObject(response );
 //                    String message = jsonResponse.getString("message");
 //                    model.addElement(message);
-//                    jList1.setModel(model);
+//                    jListMessage.setModel(model);
 //    //                Cuộn xuống cuối danh sách tin nhắn
-//                    jList1.ensureIndexIsVisible(model.getSize() - 1);
+//                    jListMessage.ensureIndexIsVisible(model.getSize() - 1);
 //                } else if (type.equals("send_message")) {
 //                    String message = jsonResponse.getString("message");
 //                    model.addElement(message);
-//                    jList1.setModel(model);
-//                    jList1.ensureIndexIsVisible(model.getSize() - 1);
+//                    jListMessage.setModel(model);
+//                    jListMessage.ensureIndexIsVisible(model.getSize() - 1);
 //                } else if (type.equals("create_room")) {
 //                    if (jsonResponse.getString("status").equals("success")) {
 //                        JOptionPane.showMessageDialog(null, "Đã tạo phòng thành công!");
@@ -365,15 +505,21 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
     private javax.swing.JButton jButtonJoin;
     private javax.swing.JButton jButtonSend;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
+    public static javax.swing.JLabel jLabelEmail;
     public static javax.swing.JLabel jLabelName;
-    public static javax.swing.JList<String> jList1;
+    public static javax.swing.JList<String> jList;
+    public static javax.swing.JList<String> jListMessage;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JSeparator jSeparator1;
     private javax.swing.JSeparator jSeparator2;
+    private javax.swing.JSeparator jSeparator3;
     public static javax.swing.JTextArea jtareaMess;
     public static javax.swing.JTextField jtfRoomId;
     // End of variables declaration//GEN-END:variables
