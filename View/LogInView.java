@@ -29,7 +29,7 @@ public class LogInView extends javax.swing.JFrame implements Runnable{
     public static DataOutputStream output;
     public static DataInputStream input;
     public static Socket socket;
-    public static final String serverIP = "192.168.1.3"; //jtfPort.getText()
+    public static final String serverIP = "172.20.10.3"; //jtfPort.getText()
     public static DefaultListModel model;
     public static DefaultListModel<String> messageListModel;
     static String name;

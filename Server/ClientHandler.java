@@ -1,20 +1,37 @@
 package Server;
 
+import static Client.Client.jtareaMess;
+import Controller.AESUtils;
+import Controller.RSADecryptor;
+//import Controller.RSAEncryptor;
 import Server.app.JDBC.JDBCUtil;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 //import static Server.Server.input;
 //import static Server.Server.output;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +97,8 @@ public class ClientHandler implements Runnable{
                     addClientToRoom(roomId, this);
                 } else if (type.equals("ConfirmPasswordRoom")) {
                     confirmPasswordRoom(receivedJson);
+                } else if (type.equals("send_image")) {
+                    saveImage(receivedJson);
                 }
             }
         } catch (IOException e) {
@@ -88,6 +107,76 @@ public class ClientHandler implements Runnable{
             removeClientFromRoom(roomId, this);
         }
     }
+    
+//    public void saveImage(JSONObject json) {
+//        String saveDir = "C:\\Users\\ACER\\Documents\\NetBeansProjects\\Chat-App\\src\\ImagesOfClient";
+//
+//        String fileName = json.getString("fileName");
+//        // Tạo tên tệp duy nhất sử dụng timestamp
+//        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+//        String savePath = saveDir + "/received_image_" + timeStamp + "_" + fileName;
+//        try (FileOutputStream fileOutputStream = new FileOutputStream(savePath);
+//                BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream)) {
+//            
+//            byte[] buffer = new byte[4096];
+//            int bytesRead;
+//            
+//            // Nhận dữ liệu ảnh từ client
+//            while (input.available() > 0 && (bytesRead = input.read(buffer)) != -1) {
+//                bufferedOutputStream.write(buffer, 0, bytesRead);
+//            }
+//
+//            bufferedOutputStream.flush();
+//            System.out.println("Image received and saved to " + savePath);
+//        } catch (FileNotFoundException e) {
+//            System.err.println("Failed to create file: " + savePath);
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            System.err.println("Error writing file: " + savePath);
+//            e.printStackTrace();
+//        }
+//    }
+    public void saveImage(JSONObject json) {
+        String saveDir = "C:\\Users\\ACER\\Documents\\NetBeansProjects\\Chat-App\\src\\ImagesOfClient";
+
+        String fileName = json.getString("fileName");
+        // Tạo tên tệp duy nhất sử dụng timestamp
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String savePath = saveDir + "/received_image_" + timeStamp + "_" + fileName;
+        try (FileOutputStream fileOutputStream = new FileOutputStream(savePath);
+                BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream)) {
+            
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            
+            while (true) {
+                try {
+                    String signal = input.readUTF();
+                    if ("<END_OF_IMAGE>".equals(signal)) {
+                        break;
+                    }
+                } catch (EOFException e) {
+                    // Ignored because we are using input.readUTF to detect end of image
+                }
+                
+                if (input.available() > 0) {
+                    bytesRead = input.read(buffer);
+                    if (bytesRead == -1) break;
+                    bufferedOutputStream.write(buffer, 0, bytesRead);
+                }
+            }
+
+            bufferedOutputStream.flush();
+            System.out.println("Image received and saved to " + savePath);
+        } catch (FileNotFoundException e) {
+            System.err.println("Failed to create file: " + savePath);
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("Error writing file: " + savePath);
+            e.printStackTrace();
+        }
+    }
+
     
     public void confirmPasswordRoom(JSONObject json) {
         boolean isAuthenticated = false;
@@ -278,13 +367,18 @@ public class ClientHandler implements Runnable{
             String sql = "INSERT INTO Message (RoomID, Message) VALUES (?, ?)";
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
                 // Thiết lập giá trị cho các tham số từ JSON
+                String message_root = json.getString("message");
+                String massageLast = AESUtils.maHoa(message_root);
+                
                 preparedStatement.setString(1, json.getString("roomId"));
-                preparedStatement.setString(2, json.getString("message"));
+                preparedStatement.setString(2, massageLast);
 
                 // Thực thi câu lệnh SQL
                 preparedStatement.executeUpdate();
-                
+
                 System.out.println("Message saved to database successfully!");
+            } catch (Exception ex) {
+                Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -437,9 +531,12 @@ public class ClientHandler implements Runnable{
                 preparedStatement.setString(1, roomID);
                 try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     while (resultSet.next()) {
+                        String message_root = resultSet.getString("message");
+                        String messageLast = AESUtils.giaiMa(message_root);
+                        
                         JSONObject json = new JSONObject();
                         json.put("type", "history_message");
-                        json.put("message", resultSet.getString("message"));
+                        json.put("message", messageLast);
                         try {
                             // Gửi tin nhắn lịch sử cho 'output' của client handler hiện tại
                             output.writeUTF(json.toString());
@@ -448,263 +545,14 @@ public class ClientHandler implements Runnable{
                             e.printStackTrace();
                         }
                     }
+            }   catch (Exception ex) {
+                    Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
                 }
-            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }   catch (SQLException ex) {
+            Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }
-
-
-//package Server;
-//
-//import Server.app.JDBC.JDBCUtil;
-//import java.io.DataInputStream;
-//import java.io.DataOutputStream;
-//import java.io.IOException;
-//import java.net.Socket;
-//import java.sql.Connection;
-//import java.sql.PreparedStatement;
-//import java.sql.ResultSet;
-//import java.sql.SQLException;
-//import java.util.ArrayList;
-//import java.util.HashMap;
-//import java.util.List;
-//import java.util.Map;
-//import java.util.logging.Level;
-//import java.util.logging.Logger;
-//import org.json.JSONObject;
-//
-//public class ClientHandler implements Runnable {
-//    Socket socket;
-//    String roomId;
-//    DataInputStream input;
-//    DataOutputStream output; // Thêm DataOutputStream cho mỗi client handler
-//    public static ArrayList<Socket> clients = new ArrayList<>();
-//    public static Map<String, List<ClientHandler>> rooms = new HashMap<>();
-//
-//    public ClientHandler(Socket socket) {
-//        this.socket = socket;
-//        try {
-//            this.input = new DataInputStream(socket.getInputStream()); // Tạo input stream cho client handler
-//            this.output = new DataOutputStream(socket.getOutputStream()); // Tạo output stream cho client handler
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//    @Override
-//    public void run() {
-//        try {
-//            while (true) { 
-//                String jsonString = input.readUTF(); // Đọc dữ liệu từ client
-//                JSONObject receivedJson = new JSONObject(jsonString);
-//                String type = receivedJson.getString("type");
-//
-//                if (type.equals("send_message")) {
-//                    String roomId2 = receivedJson.getString("roomId");
-//                    String message = receivedJson.getString("message");
-//                    JSONObject json = new JSONObject();
-//                    json.put("message", message);
-//                    sendMessageToRoom(roomId2, json); // Gửi tin nhắn đến phòng
-//                    saveMessageToDatabase(receivedJson); // Lưu tin nhắn vào cơ sở dữ liệu
-//                } else if (type.equals("create_room")) {
-//                    saveDataRoomToDatabase(receivedJson); // Tạo phòng mới
-//                } else if (type.equals("create_account")) {
-//                    saveAccountToDatabase(receivedJson); // Tạo tài khoản mới
-//                } else if (type.equals("login")) {
-//                    checkAccount(receivedJson); // Kiểm tra đăng nhập
-//                } else if (type.equals("history_message")) {
-//                    roomId = receivedJson.getString("roomid");
-//                    getMessagesByRoomID(roomId, this.output); // Gửi lịch sử tin nhắn cho client hiện tại
-//                    addClientToRoom(roomId, this); // Thêm client vào phòng
-//                } 
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } finally {
-//            removeClientFromRoom(roomId, this); // Xóa client khỏi phòng khi kết thúc
-//        }
-//    }
-//
-//    public static synchronized void removeClientFromRoom(String roomId, ClientHandler clientHandler) {
-//        List<ClientHandler> clientsInRoom = rooms.get(roomId);
-//        if (clientsInRoom != null) {
-//            clientsInRoom.remove(clientHandler); // Xóa client khỏi danh sách phòng
-//            if (clientsInRoom.isEmpty()) {
-//                rooms.remove(roomId); // Xóa phòng nếu không còn client nào
-//            }
-//        } else {
-//            System.out.println("null");
-//        }
-//    }
-//
-//    public static synchronized void sendMessageToRoom(String roomId, JSONObject message) {
-//        List<ClientHandler> clientsInRoom = rooms.get(roomId);
-//        if (clientsInRoom != null) {
-//            for (ClientHandler client : clientsInRoom) {
-//                try {
-//                    JSONObject jsonMess = new JSONObject();
-//                    jsonMess.put("type", "send_message");
-//                    jsonMess.put("message", message.getString("message"));
-//                    client.output.writeUTF(jsonMess.toString()); // Gửi tin nhắn đến client
-//                    client.output.flush();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        }
-//    }
-//
-//    public static synchronized void addClientToRoom(String roomId, ClientHandler clientHandler) {
-//        List<ClientHandler> clientsInRoom = rooms.get(roomId);
-//        if (clientsInRoom == null) {
-//            clientsInRoom = new ArrayList<>();
-//            rooms.put(roomId, clientsInRoom);
-//        }
-//        clientsInRoom.add(clientHandler); // Thêm client vào phòng
-//    }
-//
-//    public void saveMessageToDatabase(JSONObject json) {
-//        try (Connection connection = JDBCUtil.getConnection()) {
-//            String sql = "INSERT INTO Message (RoomID, Message) VALUES (?, ?)";
-//            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-//                preparedStatement.setString(1, json.getString("roomId"));
-//                preparedStatement.setString(2, json.getString("message"));
-//                preparedStatement.executeUpdate();
-//                System.out.println("Message saved to database successfully!");
-//            }
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//    public void saveAccountToDatabase(JSONObject json) throws IOException {
-//        try (Connection connection = JDBCUtil.getConnection()) {
-//            String sql = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
-//            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-//                preparedStatement.setString(1, json.getString("name"));
-//                preparedStatement.setString(2, json.getString("email"));
-//                preparedStatement.setString(3, json.getString("password"));
-//                preparedStatement.executeUpdate();
-//                System.out.println("Account saved to database successfully!");
-//                JSONObject json1 = new JSONObject();
-//                json1.put("type", "create_account");
-//                json1.put("status", "success");
-//                output.writeUTF(json1.toString()); // Gửi kết quả tạo tài khoản thành công
-//                output.flush();
-//            }
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//            JSONObject jsonResponse = new JSONObject();
-//            jsonResponse.put("type", "create_account");
-//            jsonResponse.put("status", "failed");
-//            try {
-//                output.writeUTF(jsonResponse.toString()); // Gửi kết quả tạo tài khoản thất bại
-//                output.flush();
-//            } catch (Exception ex) {
-//                ex.printStackTrace();
-//            }
-//        }
-//    }
-//
-//    public void saveDataRoomToDatabase(JSONObject json) throws IOException {
-//        try (Connection connection = JDBCUtil.getConnection()) {
-//            String sql = "INSERT INTO RoomID (RoomID, PassWord) VALUES (?, ?)";
-//            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-//                preparedStatement.setString(1, json.getString("roomId"));
-//                preparedStatement.setString(2, json.getString("password"));
-//                preparedStatement.executeUpdate();
-//                System.out.println("Room saved to database successfully!");
-//                JSONObject json1 = new JSONObject();
-//                json1.put("type", "create_room");
-//                json1.put("status", "success");
-//                output.writeUTF(json1.toString()); // Gửi kết quả tạo phòng thành công
-//                output.flush();
-//            }
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//            JSONObject json1 = new JSONObject();
-//            json1.put("type", "create_room");
-//            json1.put("status", "failed");
-//            try {
-//                output.writeUTF(json1.toString()); // Gửi kết quả tạo phòng thất bại
-//                output.flush();
-//            } catch (IOException ex) {
-//                Logger.getLogger(ClientHandler.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//        }
-//    }
-//
-//    public void checkAccount(JSONObject json) {
-//        boolean isAuthenticated = false;
-//        try (Connection connection = JDBCUtil.getConnection()) {
-//            String sql = "SELECT 1 FROM users WHERE email = ? AND password = ?";
-//            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-//                preparedStatement.setString(1, json.getString("email"));
-//                preparedStatement.setString(2, json.getString("password"));
-//                try (ResultSet rs = preparedStatement.executeQuery()) {
-//                    isAuthenticated = rs.next();
-//                    JSONObject jsonAccounnt = new JSONObject();
-//                    if (isAuthenticated) {
-//                        String name = getName(json.getString("email"));
-//                        jsonAccounnt.put("type", "login");
-//                        jsonAccounnt.put("status", "success");
-//                        jsonAccounnt.put("name", name);
-//                    } else {
-//                        jsonAccounnt.put("type", "login");
-//                        jsonAccounnt.put("status", "failed");
-//                    }
-//                    output.writeUTF(jsonAccounnt.toString()); // Gửi kết quả đăng nhập
-//                    output.flush();
-//                }
-//            }
-//        } catch (SQLException | IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//    private String getName(String email) {
-//        String name = null;
-//        try (Connection connection = JDBCUtil.getConnection()) {
-//            String sql = "SELECT name FROM users WHERE email=?";
-//            try (PreparedStatement st = connection.prepareStatement(sql)) {
-//                st.setString(1, email);
-//                try (ResultSet rs = st.executeQuery()) {
-//                    if (rs.next()) {
-//                        name = rs.getString("name");
-//                        System.out.println("Tên: " + name);
-//                    }
-//                }
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//        return name;
-//    }
-//
-//    private void removeClient(Socket socket) {
-//        clients.remove(socket);
-//    }
-//
-//    public static void getMessagesByRoomID(String roomID, DataOutputStream output) {
-//        try (Connection connection = JDBCUtil.getConnection()) {
-//            String sql = "SELECT message FROM Message WHERE roomID = ?";
-//            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-//                preparedStatement.setString(1, roomID);
-//                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-//                    while (resultSet.next()) {
-//                        JSONObject json = new JSONObject();
-//                        json.put("type", "history_message");
-//                        json.put("message", resultSet.getString("message"));
-//                        output.writeUTF(json.toString()); // Gửi từng tin nhắn lịch sử cho client
-//                        output.flush();
-//                    }
-//                }
-//            }
-//        } catch (SQLException | IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-//}

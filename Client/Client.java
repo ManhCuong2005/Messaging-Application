@@ -1,14 +1,32 @@
 package Client;
 
 import Controller.MD5;
-import Server.app.JDBC.JDBCUtil;
 import View.CreateAccountView;
 import View.LogInView;
 import java.awt.BorderLayout;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.awt.image.BufferedImageOp;
+import java.awt.image.ConvolveOp;
+import java.awt.image.Kernel;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.Socket;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -18,7 +36,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import java.sql.PreparedStatement;
+import java.util.Base64;
 import java.util.Enumeration;
+import java.util.zip.DeflaterOutputStream;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -53,31 +82,6 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
         
         jList.setModel(model);
         
-//        jList.addListSelectionListener(new ListSelectionListener() {
-//            public void valueChanged(ListSelectionEvent e) {
-//                if (!e.getValueIsAdjusting()) {
-//                    
-//                    try {
-//                        // Lấy phần tử đã chọn
-//                        String selectedValue = jList.getSelectedValue();
-//                        System.out.println("Selected: " + selectedValue);
-//
-//                        model.clear();
-//                        jListMessage.setModel(model);
-//
-//                        JSONObject jsonConfirmPasswordRoom = new JSONObject();
-//                        jsonConfirmPasswordRoom.put("type", "history_message");
-//                        jsonConfirmPasswordRoom.put("roomId", selectedValue);
-//                        jsonConfirmPasswordRoom.put("email", email);
-//                        output.writeUTF(jsonConfirmPasswordRoom.toString());
-//                        output.flush();
-//                    } catch (IOException ex) {
-//                        Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-//                    }
-//                }
-//            }
-//        });
-
         jList.addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent e) {
                 if (!e.getValueIsAdjusting()) {
@@ -113,9 +117,29 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
     private JSONObject createMessageJSON() {
         JSONObject json = new JSONObject();
         if (Client.jtareaMess.getText() != null) {
-            json.put("type", "send_message");
-            json.put("roomId", jtfRoomId.getText());
-            json.put("message", (name + ": " + jtareaMess.getText()));
+//            try {
+                System.out.println("ok");
+                json.put("type", "send_message");
+                json.put("roomId", jtfRoomId.getText());
+
+                // Initialize RSAEncryptor and generate keys
+//                RSAEncryptor encryptor;
+//                encryptor = new RSAEncryptor();
+//                PublicKey publicKey = encryptor.getPublicKey();
+//                PrivateKey privateKey = encryptor.getPrivateKey();
+
+                // Encrypt a message
+                String message = (name + ": " + jtareaMess.getText());
+//                byte[] encryptedMessage = encryptor.encrypt(message);
+//                String encryptedMessage_Last = new String(encryptedMessage);
+//                System.out.println("Ma hoa tin nhan: " + encryptedMessage);
+                
+                json.put("message", message);
+//            } catch (NoSuchAlgorithmException ex) {
+//                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//            } catch (Exception ex) {
+//                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//            }
         }
         return json;
     }
@@ -139,6 +163,7 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
         jLabel2 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         jSeparator1 = new javax.swing.JSeparator();
+        jButton1 = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         jSeparator2 = new javax.swing.JSeparator();
         jLabel1 = new javax.swing.JLabel();
@@ -203,6 +228,13 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
         jLabel3.setFont(new java.awt.Font("Times New Roman", 1, 20)); // NOI18N
         jLabel3.setText("Email:");
 
+        jButton1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/Images/photos-icon (1).png"))); // NOI18N
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -213,15 +245,18 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
                     .addComponent(jSeparator1)
                     .addComponent(jScrollPane3)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addComponent(jScrollPane2)
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 51, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 677, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jButtonSend, javax.swing.GroupLayout.PREFERRED_SIZE, 62, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                             .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, 116, Short.MAX_VALUE)
+                                .addComponent(jLabel4)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jtfRoomId, javax.swing.GroupLayout.PREFERRED_SIZE, 504, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addComponent(jtfRoomId))
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(jLabel3)
@@ -233,7 +268,7 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jButtonJoin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jButton3, javax.swing.GroupLayout.DEFAULT_SIZE, 149, Short.MAX_VALUE))))
+                            .addComponent(jButton3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
@@ -258,11 +293,12 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
                     .addComponent(jtfRoomId)
                     .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 454, Short.MAX_VALUE)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 454, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
-                    .addComponent(jButtonSend, javax.swing.GroupLayout.PREFERRED_SIZE, 45, Short.MAX_VALUE))
+                    .addComponent(jButtonSend, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                    .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
 
@@ -358,30 +394,6 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
             }
         } catch (Exception e) {
         }
-
-//        try (Connection connection = JDBCUtil.getConnection()) {
-//            roomId = jtfRoomId.getText();
-//            if (roomId.equals("")) {
-//                JOptionPane.showMessageDialog(this, "Vui lòng nhập Room ID");
-//            } else {
-//                String sql = "SELECT * FROM User_Groups WHERE roomID = ? and email = ?";
-//                PreparedStatement pst = connection.prepareStatement(sql);
-//                pst.setString(1, roomId);
-//                pst.setString(2, email);
-//                ResultSet rs = pst.executeQuery();
-//                if (rs.next()) {
-//                    JOptionPane.showMessageDialog(this, "Bạn đã ở trong phòng này");
-//                } else {
-//                    String query = "INSERT INTO User_Groups(roomID, email) VALUES (?, ?)";
-//                    PreparedStatement statement = connection.prepareStatement(query);
-//                    statement.setString(1, roomId);
-//                    statement.setString(2, email);
-//                    statement.executeUpdate();
-//                }
-//            }
-//        } catch (SQLException ex) {
-//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-//        }
     }//GEN-LAST:event_jButtonJoinActionPerformed
 
     private void jButtonSendActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSendActionPerformed
@@ -399,7 +411,6 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
     }//GEN-LAST:event_jButtonSendActionPerformed
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
-//        dispose();
         View.CreateRoomView createRoom = new View.CreateRoomView(socket);
         createRoom.setVisible(true);
     }//GEN-LAST:event_jButton3ActionPerformed
@@ -408,6 +419,79 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
         // TODO add your handling code here:
     }//GEN-LAST:event_jtfRoomIdActionPerformed
 
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Chọn ảnh");
+
+        int returnValue = fileChooser.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            String imagePath = fileChooser.getSelectedFile().getAbsolutePath();
+            System.out.println("Đường dẫn của ảnh: " + imagePath);
+            sendImage(imagePath);
+        }
+    }//GEN-LAST:event_jButton1ActionPerformed
+
+    public void sendImage(String imagePath) {
+        try {
+            FileInputStream fileInputStream = new FileInputStream(imagePath);
+            BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
+
+            File file = new File(imagePath);
+            String fileName = file.getName();
+
+            JSONObject jsonImage = new JSONObject();
+            jsonImage.put("type", "send_image");
+            jsonImage.put("fileName", fileName);
+
+            String jsonString = jsonImage.toString();
+            byte[] jsonBytes = jsonString.getBytes("UTF-8");
+
+            // Gửi chuỗi JSON trước
+            output.writeUTF(jsonString);
+
+            // Gửi dữ liệu ảnh
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = bufferedInputStream.read(buffer)) != -1) {
+                output.write(buffer, 0, bytesRead);
+            }
+
+            // Gửi dấu hiệu kết thúc ảnh
+            output.writeUTF("<END_OF_IMAGE>");
+
+            bufferedInputStream.close();
+            output.flush();
+            System.out.println("Image sent successfully!");
+        } catch (FileNotFoundException ex) {
+            ex.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    
+//    private void convertImageToBinary(String filePath) {
+//        try {
+//            FileInputStream fileInputStream = new FileInputStream(filePath);
+//
+//            byte[] buffer = new byte[4096];
+//            int bytesRead;
+//
+//            try {
+//                // Gửi ảnh qua socket
+//                while ((bytesRead = input.read(buffer)) != -1) {
+//                    output.write(buffer, 0, bytesRead);
+//                }
+//            } catch (IOException ex) {
+//                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//
+//            System.out.println("Image sent successfully!");
+//        } catch (FileNotFoundException ex) {
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//    }
+    
     public static void main(String args[]) {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
@@ -435,72 +519,14 @@ public class Client extends javax.swing.JFrame /*implements Runnable*/ {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new Client(socket).setVisible(true);
+//                new Client(socket).setVisible(true);
                 
             }
         });
     }
-//        Thread.startVirtualThread(task)
-//    }
-//    
-//    @Override
-//    public void run() {
-//        try {
-//            while (true) {
-//                String response = input.readUTF();
-//                JSONObject jsonResponse = new JSONObject(response);
-//                String type = jsonResponse.getString("type");
-//                System.out.println("Thông điệp từ server: " + type);
-//                if (type.equals("login")) {
-//                    if (jsonResponse.getString("status").equals("success")) {
-//                        JOptionPane.showMessageDialog(null, "Đăng nhập thành công");
-//                        name = jsonResponse.getString("name");
-//                        System.out.println("Tên ở client hiện là: " + name);
-//                        jLabelName.setText(name);
-//                        dispose();
-//                        Client c = new Client();
-//                        c.setVisible(true);
-//                    } else {
-//                        JOptionPane.showMessageDialog(null, "Sai tài khoản hoặc mật khẩu");
-//                    }
-//                } else if (type.equals("message_history")){
-////                    String message = input.readUTF();
-////                    String jsonString  = input.readUTF();
-////                    JSONObject receivedJson = new JSONObject(response );
-//                    String message = jsonResponse.getString("message");
-//                    model.addElement(message);
-//                    jListMessage.setModel(model);
-//    //                Cuộn xuống cuối danh sách tin nhắn
-//                    jListMessage.ensureIndexIsVisible(model.getSize() - 1);
-//                } else if (type.equals("send_message")) {
-//                    String message = jsonResponse.getString("message");
-//                    model.addElement(message);
-//                    jListMessage.setModel(model);
-//                    jListMessage.ensureIndexIsVisible(model.getSize() - 1);
-//                } else if (type.equals("create_room")) {
-//                    if (jsonResponse.getString("status").equals("success")) {
-//                        JOptionPane.showMessageDialog(null, "Đã tạo phòng thành công!");
-//                    } else if (jsonResponse.getString("status").equals("failed")) {
-//                        JOptionPane.showMessageDialog(null, "ID phòng đã tồn tại!");
-//                    }
-//                } else if (type.equals("create_account")) {
-//                    if(jsonResponse.getString("status").equals("success")) {
-//                        JOptionPane.showMessageDialog(null, "Account created successfully!");
-//                        View.CreateAccountView.jTFEmailUser.setText("");
-//                        View.CreateAccountView.jTFNameUser.setText("");
-//                        View.CreateAccountView.jTFPasswordUser.setText("");
-//                    } else  if (jsonResponse.getString("status").equals("failed")){
-//                        JOptionPane.showMessageDialog(null, "Account exited!");
-//                    }
-//                    
-//                }
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton3;
     private javax.swing.JButton jButtonJoin;
     private javax.swing.JButton jButtonSend;
